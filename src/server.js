@@ -1,5 +1,5 @@
-const routes = require('./routes');
-const MongoClient = require('mongodb').MongoClient;
+const routes = require('./routes/PublicUtilityPaymentsRoutes');
+const mongoose = require('mongoose');
 const assert = require('assert');
 const path = require('path');
 const express = require('express');
@@ -31,32 +31,16 @@ server.use((req, res, next) => {
 
 server.get('/api', (req, res) => res.send('API в строю!'));
 
-// Create a new MongoClient
-const client = new MongoClient(dataBaseConfig.url, { useNewUrlParser: true });
+// Prints "MongoError: bad auth Authentication failed."
+mongoose.connect(dataBaseConfig.url, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 5000,
+  dbName: dataBaseConfig.dbName
+}).catch(err => console.log(err.reason));
+const dataBase = mongoose.connection;
+dataBase.on('error', (error) => console.log(error));
+dataBase.once('open', () => console.log('connected to database'));
 
-// Use connect method to connect to the Server
-// client.connect(function(err) {
-//   assert.equal(null, err);
-//   console.log("Connected successfully to server");
-
-//   const db = client.db(dbName);
-
-//   client.close();
-// });
-
-
-client.connect((err) => {
-    if(err) return console.log(err);
-
-    const {dbName, collectionName} = dataBaseConfig;
-
-    console.log('Successful connection to db');
-    const dataBase = client.db(dbName);
-    const collection = client.db(dbName).collection(collectionName);
-
-    routes(server, dataBase);
-    server.listen(port, () => console.log('Express server listening on port' + port));
-
-    // perform actions on the collection object
-    client.close();
-});
+server.use('/public-utility-payments', routes);
+server.listen(port, () => console.log('server started'));
