@@ -12,7 +12,7 @@ const publicUtilityPaymentsSchema = new mongoose.Schema({
         required: true,
         default: new Date().getMonth()
     },
-    electrisity: {
+    electricity: {
         data: {
             type: Number,
             required: false
@@ -22,6 +22,10 @@ const publicUtilityPaymentsSchema = new mongoose.Schema({
             required: false
         },
         countedSum: {
+            type: Number,
+            required: false
+        },
+        rate: {
             type: Number,
             required: false
         }
@@ -36,6 +40,10 @@ const publicUtilityPaymentsSchema = new mongoose.Schema({
             required: false
         },
         countedSum: {
+            type: Number,
+            required: false
+        },
+        rate: {
             type: Number,
             required: false
         }

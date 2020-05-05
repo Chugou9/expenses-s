@@ -19,14 +19,17 @@ server.use(express.static(path.join(__dirname, 'public'))); // запуск ст
 
 server.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
-
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-  next();
-
+  res.header('Access-Control-Allow-Headers', 'Origin, Content-Type, Accept');
+  res.header('Access-Control-Allow-Methods', 'DELETE, GET, PATCH, PUT, POST, OPTIONS');
+  
+  
   server.options('*', (req, res) => {
-    res.header('Access-Control-Allow-Methods', 'GET, PATCH, PUT, POST, DELETE, OPTIONS');
+    
+    res.header('Content-Type', 'text/plain');
     res.send();
-  })
+  });
+  
+  next();
 });
 
 server.get('/api', (req, res) => res.send('API в строю!'));
@@ -35,6 +38,7 @@ server.get('/api', (req, res) => res.send('API в строю!'));
 mongoose.connect(dataBaseConfig.url, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
+  useFindAndModify: false,
   serverSelectionTimeoutMS: 5000,
   dbName: dataBaseConfig.dbName
 }).catch(err => console.log(err.reason));
