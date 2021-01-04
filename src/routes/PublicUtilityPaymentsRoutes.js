@@ -15,8 +15,8 @@ router.post('/', async (req, res) => {
     const newPublicUtilityPayments = new PublicUtilityPayments({
         ...req.body,
         sum: {
-            actualSum: rent + (hus* 1.01) + gasActualSum + electricityActualSum,
-            countedSum: rent + (hus* 1.01) + gasCountedSum + electricityCountedSum
+            actualSum: rent + ((hus + gasActualSum + electricityActualSum)* 1.01),
+            countedSum: rent + ((hus + gasCountedSum + electricityCountedSum)* 1.01)
         }
     });
 
@@ -34,8 +34,9 @@ router.post('/', async (req, res) => {
  */
 router.get('/', async (req, res) => {
     try {
-        const {year, month} = req.body;
-        const publicUtilityPayments = await PublicUtilityPayments.find();
+        const {year, month} = req.query;
+        console.log('year', year);
+        const publicUtilityPayments = await PublicUtilityPayments.find({year});
 
         res.json(publicUtilityPayments);
     } catch (err) {
@@ -78,7 +79,7 @@ router.put('/:id', getPublicUtilityPayment, async (req, res) => {
             }
         }
 
-        const {rent, hus, gas, electricity} = res.publicUtilityPayment;
+        const {rent, hus, gas, electricity, year} = res.publicUtilityPayment;
         const electricityActualSum = electricity.actualSum ? +electricity.actualSum : 0;
         const gasActualSum = gas.actualSum ? +gas.actualSum : 0;
         let electricityCountedSum = 0;
@@ -93,14 +94,15 @@ router.put('/:id', getPublicUtilityPayment, async (req, res) => {
 
         res.publicUtilityPayment.sum = {
             ...res.publicUtilityPayment.sum,
-            actualSum: Math.round((rent + (hus* 1.01) + gasActualSum + electricityActualSum) * 100) / 100
+            actualSum: Math.round((rent + (hus + gasActualSum + electricityActualSum) * 1.01) * 100) / 100
         };
+        const nextMonth = res.publicUtilityPayment.month === 11 ? 0 : res.publicUtilityPayment.month + 1;
 
-        const nextPaymentFull = await PublicUtilityPayments.findOne({month: res.publicUtilityPayment.month + 1});
+        const nextPaymentFull = await PublicUtilityPayments.findOne({month: nextMonth});
         const nextPayment = await PublicUtilityPayments.findOneAndUpdate(
-            {month: res.publicUtilityPayment.month + 1},
+            {month: nextMonth},
             {
-                month: res.publicUtilityPayment.month + 1,
+                month: nextMonth,
                 gas: {
                     actualSum: nextPaymentFull && nextPaymentFull.gas.actualSum ? nextPaymentFull.gas.actualSum : 0,
                     countedSum: gasCountedSum,
@@ -114,9 +116,10 @@ router.put('/:id', getPublicUtilityPayment, async (req, res) => {
                     data: nextPaymentFull && nextPaymentFull.electricity.data ? nextPaymentFull.electricity.data : 0,
                 },
                 sum: {
-                    countedSum: Math.round((rent + (hus * 1.01) + gasCountedSum + electricityCountedSum) * 100) / 100
+                    countedSum: Math.round((rent + (hus + gasCountedSum + electricityCountedSum) * 1.01) * 100) / 100
                 },
-                rent
+                rent,
+                year: nextPaymentFull?.year ? nexPaymentFull.year : nextMonth === 0 ? year + 1 : year 
             },
             {upsert: true}
         );
