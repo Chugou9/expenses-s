@@ -51,6 +51,7 @@ const publicUtilityPaymentsSchema = new mongoose.Schema({
     hus: {
         type: Number,
         required: false,
+        default: 0
     },
     rent: {
         type: Number,
