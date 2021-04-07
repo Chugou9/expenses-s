@@ -2,11 +2,12 @@ const express = require('express');
 const router = express.Router();
 const PublicUtilityPayments = require('../Models/PublicUtilityPayments');
 const isEmpty = require('lodash.isempty');
+const isVerified = require('./VerifyToken');
 
 /**
  * Добавление новых данных по коммунальным платежам.
  */
-router.post('/', async (req, res) => {
+router.post('/',  async (req, res) => {
     const {rent, hus, gas, electricity} = req.body;
     const electricityActualSum = electricity.actualSum;
     const gasActualSum = gas.actualSum;
