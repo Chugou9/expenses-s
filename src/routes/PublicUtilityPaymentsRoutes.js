@@ -1,11 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const PublicUtilityPayments = require('../Models/PublicUtilityPayments');
+const isEmpty = require('lodash.isempty');
+const isVerified = require('./VerifyToken');
 
 /**
  * Добавление новых данных по коммунальным платежам.
  */
-router.post('/', async (req, res) => {
+router.post('/',  async (req, res) => {
     const {rent, hus, gas, electricity} = req.body;
     const electricityActualSum = electricity.actualSum;
     const gasActualSum = gas.actualSum;
@@ -35,8 +37,8 @@ router.post('/', async (req, res) => {
 router.get('/', async (req, res) => {
     try {
         const {year, month} = req.query;
-        console.log('year', year);
         const publicUtilityPayments = await PublicUtilityPayments.find({year});
+        console.log('year', publicUtilityPayments);
 
         res.json(publicUtilityPayments);
     } catch (err) {
@@ -96,34 +98,40 @@ router.put('/:id', getPublicUtilityPayment, async (req, res) => {
             ...res.publicUtilityPayment.sum,
             actualSum: Math.round((rent + (hus + gasActualSum + electricityActualSum) * 1.01) * 100) / 100
         };
-        const nextMonth = res.publicUtilityPayment.month === 11 ? 0 : res.publicUtilityPayment.month + 1;
+        const nextMonth = res.publicUtilityPayment.month == 11 ? 0 : res.publicUtilityPayment.month + 1;
+        const nextPaymentFull = await PublicUtilityPayments.findOne({year: {'$eq': nextMonth == 0 ? year + 1 : year}, month: {'$eq': nextMonth}});
+        console.log('next', nextPaymentFull);
+        const nextYear = !isEmpty(nextPaymentFull?.year) ? nexPaymentFull.year : nextMonth == 0 ? year + 1 : year
 
-        const nextPaymentFull = await PublicUtilityPayments.findOne({month: nextMonth});
+        const query = {month: {'$eq': nextMonth}, year: {'$eq': nextYear}};
         const nextPayment = await PublicUtilityPayments.findOneAndUpdate(
-            {month: nextMonth},
+            query,
             {
-                month: nextMonth,
-                gas: {
-                    actualSum: nextPaymentFull && nextPaymentFull.gas.actualSum ? nextPaymentFull.gas.actualSum : 0,
-                    countedSum: gasCountedSum,
-                    rate: gas.rate,
-                    data: nextPaymentFull && nextPaymentFull.gas.data ? nextPaymentFull.gas.data : 0,
-                },
-                electricity: {
-                    actualSum: nextPaymentFull && nextPaymentFull.electricity.actualSum ? nextPaymentFull.electricity.actualSum : 0,
-                    countedSum: electricityCountedSum,
-                    rate: electricity.rate,
-                    data: nextPaymentFull && nextPaymentFull.electricity.data ? nextPaymentFull.electricity.data : 0,
-                },
-                sum: {
-                    countedSum: Math.round((rent + (hus + gasCountedSum + electricityCountedSum) * 1.01) * 100) / 100
-                },
-                rent,
-                year: nextPaymentFull?.year ? nexPaymentFull.year : nextMonth === 0 ? year + 1 : year 
+                '$set': {
+                    month: nextMonth,
+                    gas: {
+                        actualSum: !isEmpty(nextPaymentFull?.gas?.actualSum) ? nextPaymentFull.gas.actualSum : 0,
+                        countedSum: gasCountedSum,
+                        rate: gas.rate,
+                        data: !isEmpty(nextPaymentFull?.gas?.data) ? nextPaymentFull.gas.data : 0,
+                    },
+                    electricity: {
+                        actualSum: !isEmpty(nextPaymentFull?.electricity?.actualSum) ? nextPaymentFull.electricity.actualSum : 0,
+                        countedSum: electricityCountedSum,
+                        rate: electricity.rate,
+                        data: !isEmpty(nextPaymentFull?.electricity?.data) ? nextPaymentFull.electricity.data : 0,
+                    },
+                    sum: {
+                        countedSum: Math.round((rent + (hus + gasCountedSum + electricityCountedSum) * 1.01) * 100) / 100
+                    },
+                    rent,
+                    year: nextYear
+                }
             },
             {upsert: true}
         );
-        nextPayment.save();
+
+        nextPayment && nextPayment.save();
 
         const updatedPublicUtilityPayment = await res.publicUtilityPayment.save();
         res.json(updatedPublicUtilityPayment);
@@ -142,7 +150,11 @@ router.put('/:id', getPublicUtilityPayment, async (req, res) => {
 async function getPublicUtilityPayment(request, response, next) {
     try {
         const publicUtilityPayment = await PublicUtilityPayments.findById(request.params.id);
-        const previousPublicUtilityPayment = await PublicUtilityPayments.findOne({month: publicUtilityPayment.month - 1});
+        const query = {
+            month: publicUtilityPayment.month === 0 ? 11 : publicUtilityPayment.month - 1,
+            year: publicUtilityPayment.month === 0 ? publicUtilityPayment.year - 1 : publicUtilityPayment.year
+        };
+        const previousPublicUtilityPayment = await PublicUtilityPayments.findOne(query);
         console.log('previous ' + previousPublicUtilityPayment);
 
         if (!publicUtilityPayment) {
