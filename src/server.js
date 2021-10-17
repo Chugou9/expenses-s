@@ -18,7 +18,8 @@ dotenv.config();
 //connect to db
 mongoose.connect(
   process.env.DB_CONNECT, 
-  {useNewUrlParser: true},
+  {useNewUrlParser: true,
+  useUnifiedTopology: true},
   () => console.log('*** Connected to db ***')
 );
 
@@ -67,3 +68,5 @@ server.use(express.json());
 server.use('/api/user', authRoute);
 server.use('/public-utility-payments', pupRoutes);
 server.listen(port, () => console.log('*** Server started ***', port));
+server.emit('Lol kek chebyrek');
+// server.get('/', (req, res) => res.send('API functioning'));

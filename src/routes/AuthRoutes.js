@@ -54,10 +54,19 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
     //validation
     const {error} = isLoginValid(req.body);
-
+    console.log('body', req.body, error)
+    res.header(
+        'Content-Security-Policy',
+        'default-src self'
+    );
+    res.header(
+        'Access-Control-Allow-Origin',
+        '*'
+    );
     if (error) return res.status(400).send(error.details[0].message);
 
     const user = await User.findOne({email: req.body.email});
+    console.log('user', user);
     if (!user) return res.status(400).send('Email or password is wrong');
     //password is correct
     const validPassword = await bcrypt.compare(req.body.password, user.password);
