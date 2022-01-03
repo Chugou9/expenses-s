@@ -1,5 +1,24 @@
 const mongoose = require('mongoose');
 
+const AbstractResource = {
+    data: {
+        type: Number,
+        required: false
+    },
+    actualSum: {
+        type: Number,
+        required: false
+    },
+    countedSum: {
+        type: Number,
+        required: false
+    },
+    rate: {
+        type: Number,
+        required: false
+    }
+};
+
 // Схема для записи коммунальынх расходов за один месяц.
 const publicUtilityPaymentsSchema = new mongoose.Schema({
     year: {
@@ -12,42 +31,9 @@ const publicUtilityPaymentsSchema = new mongoose.Schema({
         required: true,
         default: new Date().getMonth()
     },
-    electricity: {
-        data: {
-            type: Number,
-            required: false
-        },
-        actualSum: {
-            type: Number,
-            required: false
-        },
-        countedSum: {
-            type: Number,
-            required: false
-        },
-        rate: {
-            type: Number,
-            required: false
-        }
-    },
-    gas: {
-        data: {
-            type: Number,
-            required: false
-        },
-        actualSum: {
-            type: Number,
-            required: false
-        },
-        countedSum: {
-            type: Number,
-            required: false
-        },
-        rate: {
-            type: Number,
-            required: false
-        }
-    },
+    electricity: AbstractResource,
+    gas: AbstractResource,
+    water: AbstractResource,
     hus: {
         type: Number,
         required: false,

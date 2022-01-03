@@ -63,9 +63,22 @@ router.post('/login', async (req, res) => {
     const validPassword = await bcrypt.compare(req.body.password, user.password);
     if (!validPassword) return res.status(400).send('Invalid password');
 
-    //create token
-    const token = jwt.sign({_id: user._id}, process.env.TOKEN_SECRET);
-    res.header('auth-token', token).send({token, userId: user._id});
+    let token;
+    if (!req.cookies || !req.cookies.secureCookie) {
+        //create token
+        if (user._id && process.env.TOKEN_SECRET) {
+            token = jwt.sign({_id: user._id}, process.env.TOKEN_SECRET);
+        } else {
+            console.log('[*** Error ***] Не хватает', user._id, process.env.TOKEN_SECRET);
+        }
+  
+        res.cookie('secureCookie', JSON.stringify({data: token}), {
+            httpOnly: process.env.NODE_ENV === "production",
+            secure: true,
+        });
+    }
+
+    res.send({userId: user._id});
 });
 
 module.exports = router;
