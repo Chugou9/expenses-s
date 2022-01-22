@@ -20,7 +20,7 @@
     "lodash.isempty": "^4.4.0",
     "mongodb": "^4.2.2",
     "mongoose": "^6.1.2",
-    "nanoid": "^3.1.30"
+    "nanoid": "^3.1.31"
   },
   "devDependencies": {
     "nodemon": "^2.0.15",
