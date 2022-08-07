@@ -41,7 +41,7 @@ router.get('/', async (req, res) => {
     try {
         const {year, month} = req.query;
         const publicUtilityPayments = await PublicUtilityPayments.find({year});
-        console.log('All payments for year', publicUtilityPayments);
+        // console.log('All payments for year', publicUtilityPayments);
 
         res.json(publicUtilityPayments);
     } catch (err) {
@@ -94,6 +94,7 @@ router.put('/:id', getPublicUtilityPayment, async (req, res) => {
         let waterCountedSum = 0;
 
         if (previousPayment) {
+            console.log('previous', previousPayment);
             const {electricity:lastElectricity, gas:lastGas, water: lastWater} = previousPayment;
 
             electricityCountedSum = getResourceCountedSum(electricity, lastElectricity);
@@ -107,24 +108,34 @@ router.put('/:id', getPublicUtilityPayment, async (req, res) => {
         };
         const nextMonth = getNextMonthValue(res.publicUtilityPayment);
         const nextPaymentFull = await getFullNextPayment(year, nextMonth);
-        console.log('next', nextPaymentFull);
         const nextYear = getNextYear(nextPaymentFull, nextMonth, year);
-
+        
         const query = {month: {'$eq': nextMonth}, year: {'$eq': nextYear}};
+        console.log('gas', gasCountedSum);
+        const newGas = {
+            actualSum: !isEmpty(nextPaymentFull?.gas.actualSum) ? nextPaymentFull?.gas.actualSum : 0,
+            countedSum: gasCountedSum,
+            rate: nextPaymentFull?.gas?.rate || currentResource?.rate || 1,
+            data: !isEmpty(nextPaymentFull?.gas?.data) ? nextPaymentFull?.gas.data : 0,
+        };
+        
+        getNextMontResourceData(nextPaymentFull?.gas, gasCountedSum, gas);
+        const newNextPayment = {
+            month: nextMonth,
+            gas: newGas,
+            electricity: getNextMontResourceData(nextPaymentFull?.electricity, electricityCountedSum, electricity),
+            water: getNextMontResourceData(nextPaymentFull?.water, waterCountedSum, water),
+            sum: {
+                countedSum: Math.round((rent + (hus + gasCountedSum + electricityCountedSum + waterCountedSum) * 1.01) * 100) / 100
+            },
+            rent,
+            year: nextYear
+        };
+        console.log('next', nextPaymentFull, 'query', query, 'newGas', newGas);
         const nextPayment = await PublicUtilityPayments.findOneAndUpdate(
             query,
             {
-                '$set': {
-                    month: nextMonth,
-                    gas: getNextMontResourceData(nextPaymentFull?.gas, gasCountedSum),
-                    electricity: getNextMontResourceData(nextPaymentFull?.electricity, electricityCountedSum),
-                    water: getNextMontResourceData(nextPaymentFull?.water, waterCountedSum),
-                    sum: {
-                        countedSum: Math.round((rent + (hus + gasCountedSum + electricityCountedSum + waterCountedSum) * 1.01) * 100) / 100
-                    },
-                    rent,
-                    year: nextYear
-                }
+                '$set': newNextPayment,
             },
             {upsert: true}
         );
@@ -193,11 +204,12 @@ function getNextYear(nextPaymentFull, nextMonth, year) {
             : year;
 }
 
-function getNextMontResourceData(resource, countedSum) {
+function getNextMontResourceData(resource, countedSum, currentResource) {
+    console.log ('countedSum', countedSum)
     return {
         actualSum: !isEmpty(resource?.actualSum) ? resourse.actualSum : 0,
-        countedSum,
-        rate: resource?.rate || 1,
+        countedSum: countedSum,
+        rate: resource?.rate || currentResource?.rate || 1,
         data: !isEmpty(resource?.data) ? resourse.data : 0,
     };
 }
