@@ -76,7 +76,7 @@ router.delete('/:id', getPublicUtilityPayment, async (request, res) => {
  */
 router.put('/:id', getPublicUtilityPayment, async (req, res) => {
     try {
-        const previousPayment = res.previousPublicUtilityPayment;
+        const [previousPayment] = res.previousPublicUtilityPayment;
 
         for (var key in req.body) {
             if (req.body[key]) {
@@ -85,7 +85,7 @@ router.put('/:id', getPublicUtilityPayment, async (req, res) => {
         }
 
         const {rent, hus, gas, electricity, year, water} = res.publicUtilityPayment;
-        console.log('current', rent, hus, gas, electricity, water, year);
+        console.log('current', 'rent',rent, 'hus',hus, 'gas',gas, 'electricity',electricity, 'water', water, 'year',year);
         const electricityActualSum = +electricity?.actualSum || 0;
         const gasActualSum = +gas?.actualSum || 0;
         const waterActualSum = +water?.actualSum || 0;
@@ -101,28 +101,27 @@ router.put('/:id', getPublicUtilityPayment, async (req, res) => {
             gasCountedSum = getResourceCountedSum(gas, lastGas);
             waterCountedSum = getResourceCountedSum(water, lastWater);
         }
-        console.log('heree');
+        console.log('heree', 'electricity', electricityCountedSum, gasCountedSum, waterCountedSum);
         res.publicUtilityPayment.sum = {
             ...res.publicUtilityPayment.sum,
             actualSum: Math.round((rent + (hus + gasActualSum + electricityActualSum + waterActualSum) * 1.01) * 100) / 100
         };
         const nextMonth = getNextMonthValue(res.publicUtilityPayment);
-        const nextPaymentFull = await getFullNextPayment(year, nextMonth);
+        const [nextPaymentFull] = await getFullNextPayment(year, nextMonth);
         const nextYear = getNextYear(nextPaymentFull, nextMonth, year);
-        
+        console.log('nextpayment gas actualSum', nextPaymentFull?.gas?.actualSum, !!nextPaymentFull?.gas?.actualSum)
         const query = {month: {'$eq': nextMonth}, year: {'$eq': nextYear}};
-        console.log('gas', gasCountedSum);
-        const newGas = {
-            actualSum: !isEmpty(nextPaymentFull?.gas.actualSum) ? nextPaymentFull?.gas.actualSum : 0,
-            countedSum: gasCountedSum,
-            rate: nextPaymentFull?.gas?.rate || currentResource?.rate || 1,
-            data: !isEmpty(nextPaymentFull?.gas?.data) ? nextPaymentFull?.gas.data : 0,
-        };
+        // const newGas = {
+        //     actualSum: nextPaymentFull?.gas?.actualSum ? nextPaymentFull?.gas.actualSum : 0,
+        //     countedSum: gasCountedSum,
+        //     rate: nextPaymentFull?.gas?.rate || gas?.rate || 1,
+        //     data: nextPaymentFull?.gas?.data ? nextPaymentFull?.gas.data : 0,
+        // };
+        console.log('gas', gasCountedSum, 'nextPayment', nextPaymentFull, 'newGas', nextPaymentFull?.gas, 'nextElectricity', nextPaymentFull?.electricity );
         
-        getNextMontResourceData(nextPaymentFull?.gas, gasCountedSum, gas);
         const newNextPayment = {
             month: nextMonth,
-            gas: newGas,
+            gas: getNextMontResourceData(nextPaymentFull?.gas, gasCountedSum, gas),
             electricity: getNextMontResourceData(nextPaymentFull?.electricity, electricityCountedSum, electricity),
             water: getNextMontResourceData(nextPaymentFull?.water, waterCountedSum, water),
             sum: {
@@ -131,7 +130,7 @@ router.put('/:id', getPublicUtilityPayment, async (req, res) => {
             rent,
             year: nextYear
         };
-        console.log('next', nextPaymentFull, 'query', query, 'newGas', newGas);
+        console.log('next', nextPaymentFull, 'query', query, 'nextPayment', newNextPayment);
         const nextPayment = await PublicUtilityPayments.findOneAndUpdate(
             query,
             {
@@ -205,12 +204,12 @@ function getNextYear(nextPaymentFull, nextMonth, year) {
 }
 
 function getNextMontResourceData(resource, countedSum, currentResource) {
-    console.log ('countedSum', countedSum)
+    console.log ('countedSum', countedSum, 'resource', resource, 'currentResource', currentResource)
     return {
-        actualSum: !isEmpty(resource?.actualSum) ? resourse.actualSum : 0,
+        actualSum: resource?.actualSum ? resource.actualSum : 0,
         countedSum: countedSum,
         rate: resource?.rate || currentResource?.rate || 1,
-        data: !isEmpty(resource?.data) ? resourse.data : 0,
+        data: resource?.data ? resource.data : 0,
     };
 }
 
